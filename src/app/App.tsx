@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform } from "motion/react";
+import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
 import confetti from "canvas-confetti";
 
 const C = {
@@ -20,6 +20,15 @@ const GALLERY = [
   { url: "https://images.unsplash.com/photo-1619467416348-6a782839e95f?w=600&h=600&fit=crop&auto=format", alt: "Travel map" },
   { url: "https://images.unsplash.com/photo-1779398190218-0018f195da4d?w=600&h=600&fit=crop&auto=format", alt: "Woman with roses" },
   { url: "https://images.unsplash.com/photo-1767730791330-ddeec135f345?w=600&h=600&fit=crop&auto=format", alt: "Red roses in park" },
+];
+
+const PHOTO_WISHES = [
+  { ...GALLERY[0], wish: "May every morning of your 22nd year open like a fresh bloom.", tag: "Wish 01" },
+  { ...GALLERY[1], wish: "May love, laughter, and soft little surprises find you everywhere.", tag: "Wish 02" },
+  { ...GALLERY[2], wish: "May your smile stay bright enough to turn ordinary days into memories.", tag: "Wish 03" },
+  { ...GALLERY[3], wish: "May every road you dream of walking become a beautiful adventure.", tag: "Wish 04" },
+  { ...GALLERY[4], wish: "May you always feel celebrated, treasured, and deeply loved.", tag: "Wish 05" },
+  { ...GALLERY[5], wish: "May this birthday be the beginning of your most magical chapter yet.", tag: "Wish 06" },
 ];
 
 const PHRASES = [
@@ -279,6 +288,74 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function PhotoWishShow() {
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setActive(i => (i + 1) % PHOTO_WISHES.length);
+    }, 3600);
+    return () => clearInterval(id);
+  }, []);
+
+  const item = PHOTO_WISHES[active];
+
+  return (
+    <div style={{ width: "100%", maxWidth: 980, margin: "0 auto", position: "relative" }}>
+      <div style={{ position: "absolute", inset: "-3rem 10%", background: `radial-gradient(circle at 50% 35%, rgba(232,99,122,0.22), transparent 58%), radial-gradient(circle at 30% 70%, rgba(212,168,67,0.16), transparent 42%)`, filter: "blur(12px)", pointerEvents: "none" }} />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem", alignItems: "center", position: "relative" }}>
+        <div style={{ minHeight: 420, display: "grid", placeItems: "center", perspective: 1000 }}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={active}
+              initial={{ opacity: 0, scale: 0.62, rotateY: -18, y: 60 }}
+              animate={{ opacity: 1, scale: 1, rotateY: 0, y: 0 }}
+              exit={{ opacity: 0, scale: 0.72, rotateY: 18, y: -40 }}
+              transition={{ duration: 0.9, ease: "easeOut" }}
+              style={{ width: "min(78vw, 340px)", aspectRatio: "4 / 5", borderRadius: 24, padding: 10, background: `linear-gradient(145deg, rgba(255,245,224,0.95), rgba(232,99,122,0.28), rgba(212,168,67,0.7))`, boxShadow: "0 28px 90px rgba(0,0,0,0.45), 0 0 45px rgba(232,99,122,0.25)", position: "relative" }}
+            >
+              <motion.img
+                src={item.url}
+                alt={item.alt}
+                animate={{ scale: [1, 1.04, 1], y: [0, -8, 0] }}
+                transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block", filter: "saturate(1.1) contrast(1.04)" }}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.7 }}
+                style={{ position: "absolute", left: "50%", bottom: -22, transform: "translateX(-50%)", width: "86%", background: "rgba(26,10,13,0.9)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 16, padding: "0.9rem 1rem", backdropFilter: "blur(18px)", boxShadow: "0 14px 35px rgba(0,0,0,0.35)" }}
+              >
+                <div style={{ fontSize: "0.65rem", letterSpacing: "0.22em", color: C.gold, textTransform: "uppercase", marginBottom: "0.35rem" }}>{item.tag}</div>
+                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.05rem", lineHeight: 1.35, color: "rgba(255,255,255,0.92)", fontStyle: "italic" }}>{item.wish}</div>
+              </motion.div>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div style={{ textAlign: "left", maxWidth: 430, justifySelf: "center" }}>
+          <div style={{ color: C.gold, letterSpacing: "0.28em", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "1rem" }}>One by one wishes</div>
+          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.2rem,5vw,4rem)", lineHeight: 1, margin: 0, color: "#fff5e0" }}>A little wish with every photo</h3>
+          <p style={{ color: "rgba(255,255,255,0.58)", lineHeight: 1.8, marginTop: "1.2rem", fontSize: "0.98rem" }}>
+            Each photo pops up softly, floats for a moment, and reveals a birthday wish before the next memory arrives.
+          </p>
+          <div style={{ display: "flex", gap: 8, marginTop: "1.6rem", flexWrap: "wrap" }}>
+            {PHOTO_WISHES.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setActive(i)}
+                aria-label={`Show wish ${i + 1}`}
+                style={{ width: i === active ? 34 : 10, height: 10, borderRadius: 999, border: 0, cursor: "pointer", background: i === active ? `linear-gradient(90deg, ${C.goldLight}, ${C.rose})` : "rgba(255,255,255,0.22)", transition: "all 0.3s ease" }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const twText = useTypewriter();
   const countdown = useCountdown();
@@ -345,6 +422,14 @@ export default function App() {
         <Reveal delay={0.1}><p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: "2rem" }}>Click the cake to celebrate</p></Reveal>
         <Reveal delay={0.2}><CakeCanvas /></Reveal>
         <Reveal delay={0.3}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.1rem", fontStyle: "italic", color: C.petals, marginTop: "1rem" }}>Every rose that bloomed today did so for you 🌹</p></Reveal>
+      </section>
+
+      <FloralDivider emoji="🌹 📸 🌹" />
+
+      {/* ── PHOTO WISHES ── */}
+      <section style={{ minHeight: "85vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
+        <Reveal><SectionTitle>Photo Wishes for Isha</SectionTitle></Reveal>
+        <Reveal delay={0.15}><PhotoWishShow /></Reveal>
       </section>
 
       <FloralDivider emoji="✈️ 🌍 ✈️" />
