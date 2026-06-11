@@ -136,17 +136,27 @@ function FireworksCanvas() {
     const c = ref.current!; const ctx = c.getContext("2d")!; let raf: number;
     const resize = () => { c.width = innerWidth; c.height = innerHeight; };
     resize(); window.addEventListener("resize", resize);
-    const launch = (x: number, y: number) => {
+    const launch = (x: number, y: number, count = 90, power = 6, size = 3) => {
       const cols = [C.goldLight, C.rose, C.lavender, "#fff", C.petals, C.gold];
-      for (let i = 0; i < 90; i++) { const a = Math.random() * Math.PI * 2; const sp = Math.random() * 6 + 1; pts.current.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, color: cols[Math.floor(Math.random() * cols.length)], life: 1, decay: Math.random() * 0.018 + 0.012, size: Math.random() * 3 + 1 }); }
+      for (let i = 0; i < count; i++) { const a = Math.random() * Math.PI * 2; const sp = Math.random() * power + 0.8; pts.current.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, color: cols[Math.floor(Math.random() * cols.length)], life: 1, decay: Math.random() * 0.018 + 0.012, size: Math.random() * size + 0.8 }); }
+    };
+    const backgroundBurst = () => {
+      const x = innerWidth * (0.12 + Math.random() * 0.76);
+      const y = innerHeight * (0.12 + Math.random() * 0.48);
+      launch(x, y, 42, 3.8, 2.2);
+      if (Math.random() > 0.65) {
+        setTimeout(() => launch(x + (Math.random() - 0.5) * 180, y + (Math.random() - 0.5) * 80, 26, 3.2, 1.8), 180);
+      }
     };
     const draw = () => { ctx.clearRect(0, 0, c.width, c.height); pts.current.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.07; p.vx *= 0.98; p.vy *= 0.98; p.life -= p.decay; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life); ctx.fill(); ctx.globalAlpha = 1; }); pts.current = pts.current.filter(p => p.life > 0); raf = requestAnimationFrame(draw); };
     draw();
     const t1 = setTimeout(() => { launch(innerWidth * 0.25, innerHeight * 0.3); launch(innerWidth * 0.75, innerHeight * 0.25); launch(innerWidth * 0.5, innerHeight * 0.4); }, 1500);
     const t2 = setTimeout(() => { launch(innerWidth * 0.15, innerHeight * 0.5); launch(innerWidth * 0.85, innerHeight * 0.45); }, 2500);
+    const crackle = setInterval(backgroundBurst, 950);
+    const firstCrackle = setTimeout(backgroundBurst, 500);
     const onClick = (e: MouseEvent) => { launch(e.clientX, e.clientY); setTimeout(() => launch(e.clientX + 60, e.clientY - 40), 120); setTimeout(() => launch(e.clientX - 60, e.clientY - 20), 240); };
     window.addEventListener("click", onClick);
-    return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); window.removeEventListener("resize", resize); window.removeEventListener("click", onClick); };
+    return () => { cancelAnimationFrame(raf); clearTimeout(t1); clearTimeout(t2); clearTimeout(firstCrackle); clearInterval(crackle); window.removeEventListener("resize", resize); window.removeEventListener("click", onClick); };
   }, []);
   return <canvas ref={ref} style={{ position: "fixed", inset: 0, zIndex: 2, pointerEvents: "none" }} />;
 }
