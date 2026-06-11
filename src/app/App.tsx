@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useScroll, useTransform } from "motion/react";
 import confetti from "canvas-confetti";
+import { PHOTOS, HAS_REAL_PHOTOS } from "./photos";
+import { WISHES } from "./wishes";
+import { TRACKS, HAS_LOCAL_MUSIC } from "./music";
+import { REASONS, FINAL_REASON_MESSAGE } from "./reasons";
 
 const C = {
   rose: "#e8637a",
@@ -22,20 +26,22 @@ const GALLERY = [
   { url: "https://images.unsplash.com/photo-1767730791330-ddeec135f345?w=600&h=600&fit=crop&auto=format", alt: "Red roses in park" },
 ];
 
-const PHOTO_WISHES = [
-  { ...GALLERY[0], wish: "May every morning of your 22nd year open like a fresh bloom.", tag: "Wish 01" },
-  { ...GALLERY[1], wish: "May love, laughter, and soft little surprises find you everywhere.", tag: "Wish 02" },
-  { ...GALLERY[2], wish: "May your smile stay bright enough to turn ordinary days into memories.", tag: "Wish 03" },
-  { ...GALLERY[3], wish: "May every road you dream of walking become a beautiful adventure.", tag: "Wish 04" },
-  { ...GALLERY[4], wish: "May you always feel celebrated, treasured, and deeply loved.", tag: "Wish 05" },
-  { ...GALLERY[5], wish: "May this birthday be the beginning of your most magical chapter yet.", tag: "Wish 06" },
-];
+// Real photos (dropped into src/photos/) when present, else stock placeholders.
+const FALLBACK_PHOTOS = GALLERY.map((g) => g.url);
+const SHOW_PHOTOS = HAS_REAL_PHOTOS ? PHOTOS : FALLBACK_PHOTOS;
+
+// Each photo paired with a heartfelt wish, in order (wishes loop if fewer than photos).
+const PHOTO_WISHES = SHOW_PHOTOS.map((url, i) => ({
+  url,
+  alt: `Isha — photo ${i + 1}`,
+  ...WISHES[i % WISHES.length],
+}));
 
 const PHRASES = [
-  "A world explorer, born to wander 🌍",
-  "The most beautiful soul 🌸",
   "Happy 22nd Birthday, Isha! 🎉",
-  "May every journey be magical ✈️",
+  "The most beautiful soul 🌸",
+  "May all your wishes come true ✨",
+  "Today is all about you 🎂",
   "Queen of Royal Floral ✨🌹",
 ];
 
@@ -233,24 +239,13 @@ function CakeCanvas() {
   );
 }
 
-function MusicBar() {
-  const [playing, setPlaying] = useState(false);
-  const ctxRef = useRef<AudioContext | null>(null);
-  const toggle = () => {
-    if (!playing) {
-      if (!ctxRef.current) {
-        const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
-        ctxRef.current = ac;
-        const gain = ac.createGain(); gain.gain.value = 0.04; gain.connect(ac.destination);
-        const notes: [number, number][] = [[261.63,0.4],[261.63,0.2],[293.66,0.5],[261.63,0.5],[349.23,0.5],[329.63,0.9],[261.63,0.4],[261.63,0.2],[293.66,0.5],[261.63,0.5],[392.0,0.5],[349.23,0.9],[261.63,0.4],[261.63,0.2],[523.25,0.5],[440.0,0.5],[349.23,0.5],[329.63,0.5],[293.66,0.9],[466.16,0.4],[466.16,0.2],[440.0,0.5],[349.23,0.5],[392.0,0.5],[349.23,0.9]];
-        let t = ac.currentTime + 0.1;
-        notes.forEach(([freq, dur]) => { const osc = ac.createOscillator(); const g = ac.createGain(); osc.type = "sine"; osc.frequency.value = freq; g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur); osc.connect(g); g.connect(gain); osc.start(t); osc.stop(t + dur + 0.05); t += dur + 0.05; });
-      } else { ctxRef.current.resume(); }
-    } else { ctxRef.current?.suspend(); }
-    setPlaying(p => !p);
-  };
+// Spotify fallback playlist (used only when src/music/ has no audio files).
+const TRACK_IDS = ["2pW5kNCx133MWWirxegvng", "0uROb6x5IunKokDggpmwKz"];
+
+// Shared floating button look (🌹 + "Birthday Melody" + equalizer).
+function MusicButton({ playing, ready, onToggle }: { playing: boolean; ready: boolean; onToggle: (e: React.MouseEvent) => void }) {
   return (
-    <motion.div onClick={toggle} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2 }} whileHover={{ scale: 1.05 }} style={{ position: "fixed", bottom: "2rem", right: "2rem", zIndex: 1000, background: "rgba(26,10,13,0.85)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "0.7rem 1.2rem", display: "flex", alignItems: "center", gap: "0.8rem", backdropFilter: "blur(20px)", cursor: "pointer" }}>
+    <motion.div onClick={onToggle} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 2 }} whileHover={{ scale: 1.05 }} title={ready ? (playing ? "Pause music" : "Play birthday music") : "Loading music…"} style={{ position: "fixed", bottom: "2rem", right: "2rem", zIndex: 1000, background: "rgba(26,10,13,0.85)", border: `1px solid rgba(212,168,67,0.3)`, borderRadius: 50, padding: "0.7rem 1.2rem", display: "flex", alignItems: "center", gap: "0.8rem", backdropFilter: "blur(20px)", cursor: "pointer" }}>
       <motion.span animate={playing ? { rotate: 360 } : { rotate: 0 }} transition={playing ? { repeat: Infinity, duration: 3, ease: "linear" } : {}} style={{ fontSize: "1.2rem", display: "inline-block" }}>🌹</motion.span>
       <span style={{ fontSize: "0.7rem", letterSpacing: "0.1em", color: "rgba(255,255,255,0.6)" }}>Birthday Melody</span>
       <div style={{ display: "flex", alignItems: "center", gap: 2, height: 16 }}>
@@ -260,6 +255,133 @@ function MusicBar() {
       </div>
     </motion.div>
   );
+}
+
+// Plays the audio files dropped into src/music/ — one after another, looping.
+function LocalMusicBar() {
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const idxRef = useRef(0);
+
+  useEffect(() => {
+    const audio = new Audio(TRACKS[0]);
+    audio.volume = 0.7;
+    audioRef.current = audio;
+    const onEnded = () => {
+      idxRef.current = (idxRef.current + 1) % TRACKS.length;
+      audio.src = TRACKS[idxRef.current];
+      audio.play().catch(() => {});
+    };
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    return () => {
+      audio.pause();
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+    };
+  }, []);
+
+  // Auto-start on first tap/click anywhere (browsers block autoplay with sound).
+  useEffect(() => {
+    const start = () => {
+      audioRef.current?.play().catch(() => {});
+      window.removeEventListener("pointerdown", start);
+    };
+    window.addEventListener("pointerdown", start);
+    return () => window.removeEventListener("pointerdown", start);
+  }, []);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const a = audioRef.current;
+    if (!a) return;
+    if (a.paused) a.play().catch(() => {});
+    else a.pause();
+  };
+
+  return <MusicButton playing={playing} ready onToggle={toggle} />;
+}
+
+// Fallback: plays the two Spotify tracks one after another, looping.
+function SpotifyMusicBar() {
+  const [playing, setPlaying] = useState(false);
+  const [ready, setReady] = useState(false);
+  const controllerRef = useRef<any>(null);
+  const idxRef = useRef(0);
+  const advancingRef = useRef(false);
+
+  useEffect(() => {
+    (window as any).onSpotifyIframeApiReady = (IFrameAPI: any) => {
+      const el = document.getElementById("spotify-embed-host");
+      if (!el) return;
+      IFrameAPI.createController(
+        el,
+        { uri: `spotify:track:${TRACK_IDS[0]}`, width: 300, height: 80 },
+        (controller: any) => {
+          controllerRef.current = controller;
+          setReady(true);
+          controller.addListener("playback_update", (e: any) => {
+            const d = e?.data || {};
+            if (typeof d.isPaused === "boolean") setPlaying(!d.isPaused);
+            if (d.duration > 0 && d.position >= d.duration - 800 && !advancingRef.current) {
+              advancingRef.current = true;
+              idxRef.current = (idxRef.current + 1) % TRACK_IDS.length;
+              controller.loadUri(`spotify:track:${TRACK_IDS[idxRef.current]}`);
+              controller.play();
+              setTimeout(() => (advancingRef.current = false), 2000);
+            }
+          });
+        }
+      );
+    };
+
+    const SID = "spotify-iframe-api";
+    if (!document.getElementById(SID)) {
+      const s = document.createElement("script");
+      s.id = SID;
+      s.async = true;
+      s.src = "https://open.spotify.com/embed/iframe-api/v1";
+      document.body.appendChild(s);
+    }
+  }, []);
+
+  useEffect(() => {
+    const start = () => {
+      if (controllerRef.current) {
+        controllerRef.current.play();
+        window.removeEventListener("pointerdown", start);
+      }
+    };
+    window.addEventListener("pointerdown", start);
+    return () => window.removeEventListener("pointerdown", start);
+  }, []);
+
+  const toggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const c = controllerRef.current;
+    if (!c) return;
+    if (playing) c.pause();
+    else c.play();
+  };
+
+  return (
+    <>
+      {/* Hidden Spotify engine — rendered (not display:none) so audio keeps playing */}
+      <div aria-hidden style={{ position: "fixed", left: 12, bottom: -140, width: 300, height: 80, opacity: 0, pointerEvents: "none", zIndex: -1 }}>
+        <div id="spotify-embed-host" />
+      </div>
+      <MusicButton playing={playing} ready={ready} onToggle={toggle} />
+    </>
+  );
+}
+
+// Uses your own audio files if you dropped any into src/music/, else Spotify.
+function MusicBar() {
+  return HAS_LOCAL_MUSIC ? <LocalMusicBar /> : <SpotifyMusicBar />;
 }
 
 function Reveal({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
@@ -288,73 +410,256 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+const SLIDE_MS = 5200;
+
 function PhotoWishShow() {
   const [active, setActive] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const count = PHOTO_WISHES.length;
+
+  const go = (dir: number) => setActive((i) => (i + dir + count) % count);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setActive(i => (i + 1) % PHOTO_WISHES.length);
-    }, 3600);
-    return () => clearInterval(id);
-  }, []);
+    if (paused) return;
+    const id = setTimeout(() => setActive((i) => (i + 1) % count), SLIDE_MS);
+    return () => clearTimeout(id);
+  }, [active, paused, count]);
 
   const item = PHOTO_WISHES[active];
 
   return (
-    <div style={{ width: "100%", maxWidth: 980, margin: "0 auto", position: "relative" }}>
-      <div style={{ position: "absolute", inset: "-3rem 10%", background: `radial-gradient(circle at 50% 35%, rgba(232,99,122,0.22), transparent 58%), radial-gradient(circle at 30% 70%, rgba(212,168,67,0.16), transparent 42%)`, filter: "blur(12px)", pointerEvents: "none" }} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "2rem", alignItems: "center", position: "relative" }}>
-        <div style={{ minHeight: 420, display: "grid", placeItems: "center", perspective: 1000 }}>
-          <AnimatePresence mode="wait">
+    <div
+      style={{ width: "100%", maxWidth: 720, margin: "0 auto", position: "relative" }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* counter */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem", marginBottom: "1.6rem", color: C.gold, letterSpacing: "0.28em", textTransform: "uppercase", fontSize: "0.7rem" }}>
+        <span style={{ color: "#fff5e0" }}>{String(active + 1).padStart(2, "0")}</span>
+        <span style={{ width: 26, height: 1, background: "rgba(212,168,67,0.5)" }} />
+        <span style={{ opacity: 0.7 }}>{String(count).padStart(2, "0")}</span>
+      </div>
+
+      {/* stage */}
+      <div style={{ position: "relative", minHeight: 560, display: "grid", placeItems: "center", perspective: 1200 }}>
+        {/* soft bloom that re-pulses on each photo */}
+        <motion.div
+          key={`glow-${active}`}
+          initial={{ opacity: 0, scale: 0.7 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.1, ease: "easeOut" }}
+          style={{ position: "absolute", width: 520, height: 520, borderRadius: "50%", background: `radial-gradient(circle, rgba(232,99,122,0.35), rgba(212,168,67,0.14) 45%, transparent 70%)`, filter: "blur(28px)", pointerEvents: "none", top: "8%" }}
+        />
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={active}
+            initial={{ opacity: 0, scale: 0.45, rotateY: -28, y: 80 }}
+            animate={{ opacity: 1, scale: 1, rotateY: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.6, rotateY: 26, y: -60 }}
+            transition={{ type: "spring", stiffness: 90, damping: 16, mass: 0.9 }}
+            style={{ position: "relative", display: "flex", flexDirection: "column", alignItems: "center", transformStyle: "preserve-3d" }}
+          >
+            {/* photo frame — gently floats */}
             <motion.div
-              key={active}
-              initial={{ opacity: 0, scale: 0.62, rotateY: -18, y: 60 }}
-              animate={{ opacity: 1, scale: 1, rotateY: 0, y: 0 }}
-              exit={{ opacity: 0, scale: 0.72, rotateY: 18, y: -40 }}
-              transition={{ duration: 0.9, ease: "easeOut" }}
-              style={{ width: "min(78vw, 340px)", aspectRatio: "4 / 5", borderRadius: 24, padding: 10, background: `linear-gradient(145deg, rgba(255,245,224,0.95), rgba(232,99,122,0.28), rgba(212,168,67,0.7))`, boxShadow: "0 28px 90px rgba(0,0,0,0.45), 0 0 45px rgba(232,99,122,0.25)", position: "relative" }}
+              animate={{ y: [0, -12, 0] }}
+              transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut" }}
+              style={{ width: "min(80vw, 340px)", aspectRatio: "4 / 5", borderRadius: 26, padding: 10, background: `linear-gradient(145deg, rgba(255,245,224,0.95), rgba(232,99,122,0.3), rgba(212,168,67,0.75))`, boxShadow: "0 34px 100px rgba(0,0,0,0.5), 0 0 55px rgba(232,99,122,0.3)", position: "relative", overflow: "hidden" }}
             >
+              {/* Ken-Burns slow zoom */}
               <motion.img
                 src={item.url}
                 alt={item.alt}
-                animate={{ scale: [1, 1.04, 1], y: [0, -8, 0] }}
-                transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
-                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block", filter: "saturate(1.1) contrast(1.04)" }}
+                initial={{ scale: 1.12 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: SLIDE_MS / 1000 + 1, ease: "easeOut" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 18, display: "block", filter: "saturate(1.08) contrast(1.04)" }}
               />
+              {/* sweeping shine */}
               <motion.div
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35, duration: 0.7 }}
-                style={{ position: "absolute", left: "50%", bottom: -22, transform: "translateX(-50%)", width: "86%", background: "rgba(26,10,13,0.9)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 16, padding: "0.9rem 1rem", backdropFilter: "blur(18px)", boxShadow: "0 14px 35px rgba(0,0,0,0.35)" }}
-              >
-                <div style={{ fontSize: "0.65rem", letterSpacing: "0.22em", color: C.gold, textTransform: "uppercase", marginBottom: "0.35rem" }}>{item.tag}</div>
-                <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.05rem", lineHeight: 1.35, color: "rgba(255,255,255,0.92)", fontStyle: "italic" }}>{item.wish}</div>
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        <div style={{ textAlign: "left", maxWidth: 430, justifySelf: "center" }}>
-          <div style={{ color: C.gold, letterSpacing: "0.28em", textTransform: "uppercase", fontSize: "0.72rem", marginBottom: "1rem" }}>One by one wishes</div>
-          <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(2.2rem,5vw,4rem)", lineHeight: 1, margin: 0, color: "#fff5e0" }}>A little wish with every photo</h3>
-          <p style={{ color: "rgba(255,255,255,0.58)", lineHeight: 1.8, marginTop: "1.2rem", fontSize: "0.98rem" }}>
-            Each photo pops up softly, floats for a moment, and reveals a birthday wish before the next memory arrives.
-          </p>
-          <div style={{ display: "flex", gap: 8, marginTop: "1.6rem", flexWrap: "wrap" }}>
-            {PHOTO_WISHES.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => setActive(i)}
-                aria-label={`Show wish ${i + 1}`}
-                style={{ width: i === active ? 34 : 10, height: 10, borderRadius: 999, border: 0, cursor: "pointer", background: i === active ? `linear-gradient(90deg, ${C.goldLight}, ${C.rose})` : "rgba(255,255,255,0.22)", transition: "all 0.3s ease" }}
+                key={`shine-${active}`}
+                initial={{ x: "-120%" }}
+                animate={{ x: "160%" }}
+                transition={{ duration: 1.5, ease: "easeInOut", delay: 0.4 }}
+                style={{ position: "absolute", top: 10, bottom: 10, left: 10, width: "45%", background: "linear-gradient(105deg, transparent, rgba(255,255,255,0.35), transparent)", pointerEvents: "none", borderRadius: 18 }}
               />
-            ))}
-          </div>
+            </motion.div>
+
+            {/* wish card */}
+            <motion.div
+              initial={{ opacity: 0, y: 26 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.45, duration: 0.8, ease: "easeOut" }}
+              style={{ marginTop: "1.4rem", width: "min(88vw, 440px)", background: "rgba(26,10,13,0.88)", border: `1px solid rgba(212,168,67,0.35)`, borderRadius: 18, padding: "1.3rem 1.5rem", backdropFilter: "blur(18px)", boxShadow: "0 18px 45px rgba(0,0,0,0.4)", textAlign: "center" }}
+            >
+              <div style={{ fontSize: "0.62rem", letterSpacing: "0.26em", color: C.gold, textTransform: "uppercase", marginBottom: "0.5rem" }}>{item.tag}</div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.25rem", color: "#fff5e0", marginBottom: "0.55rem" }}>{item.title}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.15rem", lineHeight: 1.5, color: "rgba(255,255,255,0.9)", fontStyle: "italic" }}>{item.text}</div>
+            </motion.div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      {/* progress bar — refills each slide */}
+      <div style={{ width: "min(88vw, 440px)", height: 3, margin: "1.6rem auto 0", background: "rgba(255,255,255,0.1)", borderRadius: 999, overflow: "hidden" }}>
+        <motion.div
+          key={`bar-${active}-${paused}`}
+          initial={{ width: "0%" }}
+          animate={{ width: paused ? "0%" : "100%" }}
+          transition={{ duration: paused ? 0 : SLIDE_MS / 1000, ease: "linear" }}
+          style={{ height: "100%", background: `linear-gradient(90deg, ${C.goldLight}, ${C.rose})`, borderRadius: 999 }}
+        />
+      </div>
+
+      {/* controls + dots */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "1rem", marginTop: "1.3rem", flexWrap: "wrap" }}>
+        <button onClick={() => go(-1)} aria-label="Previous photo" style={navBtn}>‹</button>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" }}>
+          {PHOTO_WISHES.map((_, i) => (
+            <button
+              key={i}
+              onClick={() => setActive(i)}
+              aria-label={`Show photo ${i + 1}`}
+              style={{ width: i === active ? 30 : 10, height: 10, borderRadius: 999, border: 0, cursor: "pointer", background: i === active ? `linear-gradient(90deg, ${C.goldLight}, ${C.rose})` : "rgba(255,255,255,0.22)", transition: "all 0.3s ease", padding: 0 }}
+            />
+          ))}
         </div>
+        <button onClick={() => go(1)} aria-label="Next photo" style={navBtn}>›</button>
       </div>
     </div>
   );
 }
+
+// ── 22 REASONS I ADORE YOU ──────────────────────────────────
+// Tap the heart → a new reason pops up with floating hearts.
+// Reaching 22/22 triggers the grand finale message + confetti.
+function ReasonsSection() {
+  const [count, setCount] = useState(0); // how many reasons revealed so far
+  const [hearts, setHearts] = useState<{ id: number; x: number; emoji: string; drift: number }[]>([]);
+  const heartId = useRef(0);
+  const done = count >= REASONS.length;
+
+  const tap = () => {
+    if (done) return;
+    const next = count + 1;
+    setCount(next);
+    // spawn a little burst of floating hearts at random positions
+    const emojis = ["💖", "💝", "💗", "🌹", "✨", "💛"];
+    const burst = Array.from({ length: 5 }, () => ({
+      id: ++heartId.current,
+      x: 10 + Math.random() * 80, // % across the card
+      emoji: emojis[Math.floor(Math.random() * emojis.length)],
+      drift: (Math.random() - 0.5) * 60,
+    }));
+    setHearts(h => [...h.slice(-20), ...burst]);
+    if (next === REASONS.length) {
+      confetti({ particleCount: 160, spread: 100, origin: { y: 0.6 }, colors: ["#e8637a", "#f5d78e", "#d4a843", "#f9c0cb"] });
+    }
+  };
+
+  return (
+    <div style={{ position: "relative", width: "min(92vw, 560px)", margin: "0 auto", textAlign: "center" }}>
+      {/* floating hearts layer */}
+      <div style={{ position: "absolute", inset: 0, overflow: "visible", pointerEvents: "none", zIndex: 5 }}>
+        <AnimatePresence>
+          {hearts.map(h => (
+            <motion.span
+              key={h.id}
+              initial={{ opacity: 0, y: 40, x: 0, scale: 0.4 }}
+              animate={{ opacity: [0, 1, 1, 0], y: -160, x: h.drift, scale: 1.1, rotate: h.drift }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 2.2, ease: "easeOut" }}
+              onAnimationComplete={() => setHearts(hs => hs.filter(x => x.id !== h.id))}
+              style={{ position: "absolute", left: `${h.x}%`, bottom: "30%", fontSize: "1.5rem" }}
+            >
+              {h.emoji}
+            </motion.span>
+          ))}
+        </AnimatePresence>
+      </div>
+
+      {/* counter */}
+      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", letterSpacing: "0.15em", marginBottom: "0.3rem" }}>
+        <span style={{ background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
+          {count} / {REASONS.length}
+        </span>
+      </div>
+      <div style={{ fontSize: "0.62rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: "1.4rem" }}>
+        reasons discovered
+      </div>
+
+      {/* progress trail of tiny hearts */}
+      <div style={{ display: "flex", justifyContent: "center", gap: 5, flexWrap: "wrap", marginBottom: "1.6rem", maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
+        {REASONS.map((_, i) => (
+          <motion.span key={i} animate={i < count ? { scale: [0, 1.4, 1], opacity: 1 } : { scale: 1, opacity: 0.18 }} transition={{ duration: 0.4 }} style={{ fontSize: "0.8rem" }}>
+            {i < count ? "💖" : "🤍"}
+          </motion.span>
+        ))}
+      </div>
+
+      {/* reason card */}
+      <div style={{ minHeight: 120, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "1.6rem" }}>
+        <AnimatePresence mode="wait">
+          {count === 0 ? (
+            <motion.p key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -16 }} style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "1.15rem", color: "rgba(255,255,255,0.5)" }}>
+              22 years. 22 reasons. Tap the heart to discover them… 💗
+            </motion.p>
+          ) : (
+            <motion.div
+              key={`reason-${count}`}
+              initial={{ opacity: 0, y: 24, scale: 0.92 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.96 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              style={{ background: "rgba(26,10,13,0.88)", border: `1px solid rgba(232,99,122,0.35)`, borderRadius: 18, padding: "1.4rem 1.6rem", backdropFilter: "blur(18px)", boxShadow: "0 16px 40px rgba(0,0,0,0.35)", maxWidth: 460 }}
+            >
+              <div style={{ fontSize: "0.6rem", letterSpacing: "0.28em", color: C.rose, textTransform: "uppercase", marginBottom: "0.5rem" }}>Reason {String(count).padStart(2, "0")}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.3rem", fontStyle: "italic", lineHeight: 1.5, color: "rgba(255,255,255,0.92)" }}>{REASONS[count - 1]}</div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* the heart button / finale */}
+      {!done ? (
+        <motion.button
+          onClick={tap}
+          whileTap={{ scale: 0.85 }}
+          animate={{ scale: [1, 1.07, 1] }}
+          transition={{ repeat: Infinity, duration: 1.2, ease: "easeInOut" }}
+          aria-label="Reveal the next reason"
+          style={{ background: `radial-gradient(circle at 35% 30%, ${C.rose}, ${C.roseDeep})`, border: `2px solid rgba(245,215,142,0.5)`, borderRadius: "50%", width: 96, height: 96, fontSize: "2.4rem", cursor: "pointer", boxShadow: `0 0 40px rgba(232,99,122,0.45), 0 14px 30px rgba(0,0,0,0.4)`, display: "inline-grid", placeItems: "center" }}
+        >
+          💖
+        </motion.button>
+      ) : (
+        <motion.div initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.8, ease: "easeOut" }} style={{ background: "rgba(26,10,13,0.9)", border: `1.5px solid ${C.gold}`, borderRadius: 22, padding: "1.8rem 1.8rem", boxShadow: `0 0 60px rgba(212,168,67,0.35)`, maxWidth: 480, margin: "0 auto" }}>
+          <motion.div animate={{ scale: [1, 1.15, 1] }} transition={{ repeat: Infinity, duration: 1.4 }} style={{ fontSize: "2rem", marginBottom: "0.6rem" }}>💝</motion.div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.35rem", color: "#fff5e0", lineHeight: 1.5 }}>{FINAL_REASON_MESSAGE}</div>
+        </motion.div>
+      )}
+
+      {!done && count > 0 && (
+        <p style={{ marginTop: "1rem", fontSize: "0.7rem", letterSpacing: "0.2em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase" }}>keep tapping… {REASONS.length - count} to go</p>
+      )}
+    </div>
+  );
+}
+
+const navBtn: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: "50%",
+  border: "1px solid rgba(212,168,67,0.35)",
+  background: "rgba(255,255,255,0.04)",
+  color: C.goldLight,
+  fontSize: "1.4rem",
+  lineHeight: 1,
+  cursor: "pointer",
+  display: "grid",
+  placeItems: "center",
+  backdropFilter: "blur(10px)",
+};
 
 export default function App() {
   const twText = useTypewriter();
@@ -400,7 +705,7 @@ export default function App() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 1 }} style={{ fontSize: "0.8rem", letterSpacing: "0.2em", color: "rgba(255,255,255,0.45)", marginTop: "0.4rem" }}>
-          A journey traveller. A soul that blooms.
+          A beautiful soul. A heart that blooms.
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.8 }} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1rem,2vw,1.4rem)", color: C.petals, fontStyle: "italic", minHeight: "2em", margin: "1rem 0" }}>
@@ -416,28 +721,10 @@ export default function App() {
 
       <FloralDivider emoji="🌸 🥀 🌸" />
 
-      {/* ── CAKE ── */}
-      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
-        <Reveal><SectionTitle>Make a Wish! 🕯️</SectionTitle></Reveal>
-        <Reveal delay={0.1}><p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: "2rem" }}>Click the cake to celebrate</p></Reveal>
-        <Reveal delay={0.2}><CakeCanvas /></Reveal>
-        <Reveal delay={0.3}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.1rem", fontStyle: "italic", color: C.petals, marginTop: "1rem" }}>Every rose that bloomed today did so for you 🌹</p></Reveal>
-      </section>
-
-      <FloralDivider emoji="🌹 📸 🌹" />
-
-      {/* ── PHOTO WISHES ── */}
-      <section style={{ minHeight: "85vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
-        <Reveal><SectionTitle>Photo Wishes for Isha</SectionTitle></Reveal>
-        <Reveal delay={0.15}><PhotoWishShow /></Reveal>
-      </section>
-
-      <FloralDivider emoji="✈️ 🌍 ✈️" />
-
       {/* ── COUNTDOWN ── */}
       <section style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
-        <Reveal><SectionTitle>Your Next Adventure Awaits</SectionTitle></Reveal>
-        <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2rem" }}>Just like the wanderer you are — always counting down to the next destination 🗺️</p></Reveal>
+        <Reveal><SectionTitle>Counting Down to Your Big Day</SectionTitle></Reveal>
+        <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2rem" }}>Every second brings us closer to celebrating the most special person 🎉</p></Reveal>
         <Reveal delay={0.2}>
           {countdown.isToday ? (
             <motion.p animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} style={{ fontSize: "2rem", color: C.gold }}>🎉 TODAY IS THE DAY! Happy Birthday Isha! 🎉</motion.p>
@@ -459,6 +746,33 @@ export default function App() {
         </Reveal>
       </section>
 
+      <FloralDivider emoji="🎂 🎈 🎂" />
+
+      {/* ── CAKE ── */}
+      <section style={{ minHeight: "100vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
+        <Reveal><SectionTitle>Make a Wish! 🕯️</SectionTitle></Reveal>
+        <Reveal delay={0.1}><p style={{ color: "rgba(255,255,255,0.4)", fontSize: "0.8rem", letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: "2rem" }}>Click the cake to celebrate</p></Reveal>
+        <Reveal delay={0.2}><CakeCanvas /></Reveal>
+        <Reveal delay={0.3}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "1.1rem", fontStyle: "italic", color: C.petals, marginTop: "1rem" }}>Every rose that bloomed today did so for you 🌹</p></Reveal>
+      </section>
+
+      <FloralDivider emoji="🌹 📸 🌹" />
+
+      {/* ── PHOTO WISHES ── */}
+      <section style={{ minHeight: "85vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
+        <Reveal><SectionTitle>Photo Wishes for Isha</SectionTitle></Reveal>
+        <Reveal delay={0.15}><PhotoWishShow /></Reveal>
+      </section>
+
+      <FloralDivider emoji="💖 🌹 💖" />
+
+      {/* ── 22 REASONS ── */}
+      <section style={{ minHeight: "85vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
+        <Reveal><SectionTitle>22 Reasons I Adore You 💖</SectionTitle></Reveal>
+        <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2.2rem" }}>One for every beautiful year of you</p></Reveal>
+        <Reveal delay={0.2}><ReasonsSection /></Reveal>
+      </section>
+
       <FloralDivider emoji="🌹 💌 🌹" />
 
       {/* ── MESSAGE ── */}
@@ -470,13 +784,13 @@ export default function App() {
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.1rem,2.2vw,1.55rem)", fontWeight: 300, lineHeight: 1.9, color: "rgba(255,255,255,0.85)", fontStyle: "italic", position: "relative", zIndex: 1 }}>
               Dear Isha,<br /><br />
               Twenty-two years ago, the world gained someone who would make it immeasurably brighter.
-              You carry within you a spirit that refuses to stay still — always chasing sunsets in cities you've never seen,
-              finding magic in cobblestone streets, and collecting memories from corners of the world most people only dream of.<br /><br />
+              You carry within you a warmth and a kindness that touch everyone lucky enough to know you —
+              the kind of soul that turns ordinary days into something worth remembering.<br /><br />
               On this day that belongs entirely to you, I hope you feel every ounce of the joy you so freely give to others.
-              May this year bring you the most breathtaking views, the most unexpected adventures, and the most beautiful moments —
+              May this year bring you endless laughter, good health, sweet little surprises, and a thousand beautiful moments —
               the kind that make your eyes light up the way only yours do.<br /><br />
-              The world is a map, and you, Isha, are the most wonderful explorer of it. Here's to 22 — may it be your most dazzling chapter yet.<br /><br />
-              With all my love,
+              You deserve all the happiness in the world, Isha. Here's to 22 — may it be your most dazzling year yet.<br /><br />
+              Happy Birthday, with all my love,
             </p>
             <div style={{ marginTop: "2rem", fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: C.gold }}>— Arup 🌹</div>
           </motion.div>
@@ -488,12 +802,12 @@ export default function App() {
       {/* ── GALLERY ── */}
       <section style={{ padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
         <Reveal><SectionTitle>Gallery of You 📸</SectionTitle></Reveal>
-        <Reveal delay={0.1}><p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.35)", marginBottom: "1.5rem", letterSpacing: "0.1em" }}>Roses, adventures & beautiful moments 🌹</p></Reveal>
+        <Reveal delay={0.1}><p style={{ fontSize: "0.8rem", color: "rgba(255,255,255,0.35)", marginBottom: "1.5rem", letterSpacing: "0.1em" }}>Roses, smiles & beautiful birthday moments 🌹</p></Reveal>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "1rem", maxWidth: 1000, margin: "0 auto" }}>
-          {GALLERY.map((img, i) => (
+          {SHOW_PHOTOS.map((url, i) => (
             <Reveal key={i} delay={i * 0.08}>
               <motion.div whileHover={{ scale: 1.04, y: -4, boxShadow: `0 10px 40px rgba(232,99,122,0.35)` }} style={{ aspectRatio: "1", borderRadius: 16, overflow: "hidden", border: `1px solid rgba(232,99,122,0.15)`, cursor: "pointer", background: C.dark2 }}>
-                <img src={img.url} alt={img.alt} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                <img src={url} alt={`Isha — photo ${i + 1}`} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
               </motion.div>
             </Reveal>
           ))}
