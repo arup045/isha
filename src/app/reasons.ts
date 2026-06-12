@@ -1,5 +1,5 @@
 // ─────────────────────────────────────────────────────────────
-//  22 Reasons I Adore You — one for each year of Isha.
+//  21 Reasons I Adore You — one for each year of Isha.
 //  Edit these freely! Make them personal — inside jokes, little
 //  habits, moments only you two know. The more specific, the
 //  more she'll love it. 💖
@@ -21,7 +21,6 @@ export const REASONS: string[] = [
   "Your strength when things get hard 💪",
   "The way you care for the people you love 🤗",
   "Your voice — I could listen to it forever 🎶",
-  "How effortlessly you make people feel welcome ☀️",
   "Your sense of style — always stunning 😍",
   "The way you believe in goodness 🕊️",
   "How smart and curious you are about everything 📚",
@@ -30,6 +29,6 @@ export const REASONS: string[] = [
   "Simply… because you're YOU, Isha. And that's everything. 💝",
 ];
 
-// The grand message revealed after all 22 reasons are found.
+// The grand message revealed after all 21 reasons are found.
 export const FINAL_REASON_MESSAGE =
-  "And those are just 22 of a million. Happy 22nd Birthday, my Isha. 🌹";
+  "And those are just 21 of a million. Happy 21st Birthday, my Isha. 🌹";

@@ -13,7 +13,7 @@ export interface Wish {
 export const WISHES: Wish[] = [
   {
     tag: "Wish 01",
-    title: "Happy 22nd, Isha",
+    title: "Happy 21st, Isha",
     text: "May this new year of your life unfold as gently and beautifully as a rose at dawn. 🌹",
   },
   {
@@ -49,7 +49,7 @@ export const WISHES: Wish[] = [
   {
     tag: "Wish 08",
     title: "Your brightest year",
-    text: "Twenty-two looks beautiful on you. May it be the happiest, most wonderful chapter yet. 🌟",
+    text: "Twenty-one looks beautiful on you. May it be the happiest, most wonderful chapter yet. 🌟",
   },
   {
     tag: "Wish 09",

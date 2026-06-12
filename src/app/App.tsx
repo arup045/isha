@@ -38,7 +38,7 @@ const PHOTO_WISHES = SHOW_PHOTOS.map((url, i) => ({
 }));
 
 const PHRASES = [
-  "Happy 22nd Birthday, Isha! 🎉",
+  "Happy 21st Birthday, Isha! 🎉",
   "The most beautiful soul 🌸",
   "May all your wishes come true ✨",
   "Today is all about you 🎂",
@@ -79,6 +79,93 @@ function useTypewriter() {
   }, []);
 
   return text;
+}
+
+// Her birth date — June 12, 2005 (turns 21 on June 12, 2026).
+const BIRTH = new Date(2005, 5, 12);
+
+// Live age ticker: years / days / hours / mins / secs since birth.
+function useAge() {
+  const [age, setAge] = useState({ years: 0, days: 0, hours: 0, mins: 0, secs: 0 });
+  useEffect(() => {
+    const calc = () => {
+      const now = new Date();
+      let years = now.getFullYear() - BIRTH.getFullYear();
+      let anniv = new Date(now.getFullYear(), BIRTH.getMonth(), BIRTH.getDate());
+      if (now < anniv) { years -= 1; anniv = new Date(now.getFullYear() - 1, BIRTH.getMonth(), BIRTH.getDate()); }
+      let diff = now.getTime() - anniv.getTime();
+      const days = Math.floor(diff / 86400000); diff -= days * 86400000;
+      const hours = Math.floor(diff / 3600000); diff -= hours * 3600000;
+      const mins = Math.floor(diff / 60000); diff -= mins * 60000;
+      const secs = Math.floor(diff / 1000);
+      setAge({ years, days, hours, mins, secs });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, []);
+  return age;
+}
+
+// Full-screen gate: the site stays hidden behind a countdown until her
+// birthday (June 12, midnight). Then a button reveals the surprise.
+// Add ?preview to the URL to bypass while building.
+function gateTarget() { const n = new Date(); return new Date(n.getFullYear(), 5, 12); }
+function isUnlockedNow() {
+  if (typeof window !== "undefined" && window.location.search.includes("preview")) return true;
+  return new Date() >= gateTarget();
+}
+
+function CountdownGate({ onEnter }: { onEnter: () => void }) {
+  const [left, setLeft] = useState({ days: 0, hours: 0, mins: 0, secs: 0, done: false });
+  useEffect(() => {
+    const calc = () => {
+      let diff = gateTarget().getTime() - Date.now();
+      if (diff <= 0) { setLeft(l => l.done ? l : { days: 0, hours: 0, mins: 0, secs: 0, done: true }); return; }
+      const days = Math.floor(diff / 86400000); diff -= days * 86400000;
+      const hours = Math.floor(diff / 3600000); diff -= hours * 3600000;
+      const mins = Math.floor(diff / 60000); diff -= mins * 60000;
+      setLeft({ days, hours, mins, secs: Math.floor(diff / 1000), done: false });
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    if (left.done) confetti({ particleCount: 180, spread: 110, origin: { y: 0.6 }, colors: ["#e8637a", "#f5d78e", "#d4a843", "#f9c0cb"] });
+  }, [left.done]);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 5000, background: C.dark, color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "2rem", fontFamily: "'Inter', sans-serif" }}>
+      <StarsCanvas />
+      <PetalsCanvas />
+      <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1 }} style={{ position: "relative", zIndex: 10 }}>
+        <div style={{ fontSize: "0.7rem", letterSpacing: "0.35em", color: C.gold, textTransform: "uppercase", marginBottom: "1rem" }}>A surprise is blooming for</div>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "clamp(3rem,10vw,6rem)", fontWeight: 900, background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", lineHeight: 1.1, marginBottom: "2rem" }}>Isha 🌹</div>
+        {!left.done ? (
+          <>
+            <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", justifyContent: "center" }}>
+              {[{ label: "Days", val: left.days }, { label: "Hours", val: left.hours }, { label: "Minutes", val: left.mins }, { label: "Seconds", val: left.secs }].map(({ label, val }) => (
+                <div key={label} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(212,168,67,0.25)`, borderRadius: 16, padding: "1.2rem 1.4rem", minWidth: 86, backdropFilter: "blur(10px)" }}>
+                  <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "3.2rem", letterSpacing: "0.06em", background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "block", lineHeight: 1 }}>{String(val).padStart(2, "0")}</span>
+                  <span style={{ fontSize: "0.6rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", display: "block", marginTop: "0.35rem" }}>{label}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ marginTop: "1.8rem", fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "1.05rem", color: "rgba(255,255,255,0.5)" }}>Something magical opens when the timer ends… ✨</p>
+          </>
+        ) : (
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.7 }}>
+            <p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "1.3rem", color: C.petals, marginBottom: "1.6rem" }}>It's time… Happy 21st Birthday! 🎂</p>
+            <motion.button onClick={onEnter} whileTap={{ scale: 0.92 }} animate={{ scale: [1, 1.06, 1] }} transition={{ repeat: Infinity, duration: 1.4 }} style={{ background: `radial-gradient(circle at 35% 30%, ${C.rose}, ${C.roseDeep})`, border: `2px solid rgba(245,215,142,0.5)`, borderRadius: 999, padding: "1.1rem 2.6rem", color: "#fff5e0", fontSize: "1.05rem", letterSpacing: "0.08em", cursor: "pointer", boxShadow: `0 0 45px rgba(232,99,122,0.5)` }}>
+              Open Your Surprise 🎁
+            </motion.button>
+          </motion.div>
+        )}
+      </motion.div>
+    </div>
+  );
 }
 
 function useCountdown() {
@@ -203,7 +290,7 @@ function CakeCanvas() {
       const ttG = ctx.createLinearGradient(120, 140, 260, 218); ttG.addColorStop(0, "#4a0e22"); ttG.addColorStop(0.5, "#8b1a35"); ttG.addColorStop(1, "#5a1228");
       ctx.beginPath(); ctx.ellipse(190, 148, 70, 13, 0, 0, Math.PI, Math.PI * 2); ctx.lineTo(120, 215); ctx.ellipse(190, 215, 70, 13, 0, Math.PI, 0); ctx.closePath(); ctx.fillStyle = ttG; ctx.fill();
       ctx.beginPath(); ctx.ellipse(190, 148, 70, 13, 0, 0, Math.PI * 2); const t3G = ctx.createRadialGradient(190, 148, 3, 190, 148, 70); t3G.addColorStop(0, "#ffd6e0"); t3G.addColorStop(1, "#a0243c"); ctx.fillStyle = t3G; ctx.fill();
-      ctx.save(); ctx.font = "bold 26px serif"; ctx.fillStyle = C.goldLight; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowColor = C.gold; ctx.shadowBlur = 8; ctx.fillText("22", 190, 182); ctx.restore();
+      ctx.save(); ctx.font = "bold 26px serif"; ctx.fillStyle = C.goldLight; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.shadowColor = C.gold; ctx.shadowBlur = 8; ctx.fillText("21", 190, 182); ctx.restore();
       // candle
       ctx.beginPath(); ctx.roundRect(185, 105, 10, 30, 3); const cg = ctx.createLinearGradient(185, 0, 195, 0); cg.addColorStop(0, C.goldLight); cg.addColorStop(1, C.gold); ctx.fillStyle = cg; ctx.fill();
       if (!blownRef.current) {
@@ -272,11 +359,14 @@ function LocalMusicBar() {
       audio.src = TRACKS[idxRef.current];
       audio.play().catch(() => {});
     };
-    const onPlay = () => setPlaying(true);
+    const onPlay = () => { setPlaying(true); startedRef.current = true; };
     const onPause = () => setPlaying(false);
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("play", onPlay);
     audio.addEventListener("pause", onPause);
+    // Try to start the moment the site opens; if the browser blocks
+    // autoplay with sound, the first-tap fallback below takes over.
+    audio.play().catch(() => {});
     return () => {
       audio.pause();
       audio.removeEventListener("ended", onEnded);
@@ -285,9 +375,16 @@ function LocalMusicBar() {
     };
   }, []);
 
-  // Auto-start on first tap/click anywhere (browsers block autoplay with sound).
+  // Fallback: if the browser blocked autoplay, start on the first
+  // tap/click anywhere. Disarms itself once playback has begun, so it
+  // never overrides Isha pausing with the 🌹 button.
+  const startedRef = useRef(false);
   useEffect(() => {
     const start = () => {
+      if (startedRef.current) {
+        window.removeEventListener("pointerdown", start);
+        return;
+      }
       audioRef.current?.play().catch(() => {});
       window.removeEventListener("pointerdown", start);
     };
@@ -530,9 +627,60 @@ function PhotoWishShow() {
   );
 }
 
-// ── 22 REASONS I ADORE YOU ──────────────────────────────────
+// ── HERO POLAROIDS ──────────────────────────────────────────
+// Her 4 best photos hanging from a golden string under the hero
+// name — each with a little compliment, like a memory wall.
+const POLAROID_NOTES = [
+  { title: "That Smile", note: "One smile, and the whole day feels lighter ✨" },
+  { title: "Pure Grace", note: "Effortlessly elegant, always 👑" },
+  { title: "Those Eyes", note: "Holding little galaxies inside 🌙" },
+  { title: "Golden Heart", note: "The kindest soul in every room 💛" },
+];
+
+function HeroPolaroids() {
+  const pics = PHOTOS.slice(0, 4);
+  if (pics.length === 0) return null;
+  const tilts = [-5, 3, -3, 5];
+  const drops = [8, 34, 20, 0]; // vertical offsets so cards follow the string's curve
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.6, duration: 1 }} style={{ position: "relative", width: "min(96vw, 1080px)", margin: "2.5rem auto 3.5rem" }}>
+      {/* golden string */}
+      <svg viewBox="0 0 1080 110" preserveAspectRatio="none" style={{ position: "absolute", top: -6, left: 0, width: "100%", height: 110, pointerEvents: "none", overflow: "visible" }}>
+        <path d="M0,18 Q270,92 540,58 T1080,26" fill="none" stroke="rgba(212,168,67,0.5)" strokeWidth="1.5" strokeDasharray="none" />
+      </svg>
+
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "flex-start", gap: "clamp(0.7rem, 2.4vw, 1.8rem)", flexWrap: "wrap", paddingTop: 26 }}>
+        {pics.map((src, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: -36, rotate: tilts[i] * 2.2 }}
+            animate={{ opacity: 1, y: drops[i], rotate: [tilts[i] - 1.2, tilts[i] + 1.2, tilts[i] - 1.2] }}
+            transition={{ delay: 1.8 + i * 0.18, duration: 0.9, ease: "easeOut", rotate: { repeat: Infinity, duration: 4.5 + i, ease: "easeInOut", delay: 2.8 } }}
+            whileHover={{ y: drops[i] - 10, rotate: 0, scale: 1.05, zIndex: 20 }}
+            style={{ position: "relative", transformOrigin: "top center", background: "linear-gradient(170deg, #fffaf2, #f7ecdd)", borderRadius: 14, padding: "0.55rem 0.55rem 0.8rem", width: "clamp(150px, 21vw, 215px)", boxShadow: "0 22px 45px rgba(0,0,0,0.45), 0 0 30px rgba(212,168,67,0.12)" }}
+          >
+            {/* golden clip pinning the card to the string */}
+            <div style={{ position: "absolute", top: -16, left: "50%", transform: "translateX(-50%)", width: 26, height: 24, background: `linear-gradient(160deg, ${C.goldLight}, ${C.gold})`, borderRadius: "6px 6px 4px 4px", boxShadow: "0 3px 8px rgba(0,0,0,0.35)" }}>
+              <div style={{ position: "absolute", top: 5, left: "50%", transform: "translateX(-50%)", width: 8, height: 8, borderRadius: "50%", background: C.dark }} />
+            </div>
+
+            <div style={{ borderRadius: 9, overflow: "hidden", aspectRatio: "4 / 5", background: "#e9dcc8" }}>
+              <img src={src} alt={POLAROID_NOTES[i % POLAROID_NOTES.length].title} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            </div>
+            <div style={{ textAlign: "left", padding: "0.55rem 0.3rem 0" }}>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "0.92rem", fontWeight: 700, color: "#3a2228" }}>{POLAROID_NOTES[i % POLAROID_NOTES.length].title}</div>
+              <div style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "0.8rem", lineHeight: 1.35, color: "#7a5a60", marginTop: 2 }}>{POLAROID_NOTES[i % POLAROID_NOTES.length].note}</div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
+}
+
+// ── 21 REASONS I ADORE YOU ──────────────────────────────────
 // Tap the heart → a new reason pops up with floating hearts.
-// Reaching 22/22 triggers the grand finale message + confetti.
+// Reaching 21/21 triggers the grand finale message + confetti.
 function ReasonsSection() {
   const [count, setCount] = useState(0); // how many reasons revealed so far
   const [hearts, setHearts] = useState<{ id: number; x: number; emoji: string; drift: number }[]>([]);
@@ -578,15 +726,13 @@ function ReasonsSection() {
         </AnimatePresence>
       </div>
 
-      {/* counter */}
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "2rem", letterSpacing: "0.15em", marginBottom: "0.3rem" }}>
-        <span style={{ background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>
-          {count} / {REASONS.length}
+      {/* counter — same style as the countdown numbers */}
+      <motion.div whileHover={{ scale: 1.05 }} style={{ display: "inline-block", background: "rgba(255,255,255,0.03)", border: `1px solid rgba(212,168,67,0.2)`, borderRadius: 16, padding: "1.2rem 2rem", minWidth: 150, backdropFilter: "blur(10px)", marginBottom: "1.6rem" }}>
+        <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "4rem", letterSpacing: "0.06em", background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "block", lineHeight: 1 }}>
+          {String(count).padStart(2, "0")}<span style={{ fontSize: "2.2rem", margin: "0 0.25rem" }}>/</span>{REASONS.length}
         </span>
-      </div>
-      <div style={{ fontSize: "0.62rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", marginBottom: "1.4rem" }}>
-        reasons discovered
-      </div>
+        <span style={{ fontSize: "0.65rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", display: "block", marginTop: "0.4rem" }}>reasons discovered</span>
+      </motion.div>
 
       {/* progress trail of tiny hearts */}
       <div style={{ display: "flex", justifyContent: "center", gap: 5, flexWrap: "wrap", marginBottom: "1.6rem", maxWidth: 420, marginLeft: "auto", marginRight: "auto" }}>
@@ -602,7 +748,7 @@ function ReasonsSection() {
         <AnimatePresence mode="wait">
           {count === 0 ? (
             <motion.p key="intro" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, y: -16 }} style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", fontSize: "1.15rem", color: "rgba(255,255,255,0.5)" }}>
-              22 years. 22 reasons. Tap the heart to discover them… 💗
+              21 years. 21 reasons. Tap the heart to discover them… 💗
             </motion.p>
           ) : (
             <motion.div
@@ -663,9 +809,12 @@ const navBtn: React.CSSProperties = {
 
 export default function App() {
   const twText = useTypewriter();
-  const countdown = useCountdown();
+  const age = useAge();
   const { scrollY } = useScroll();
   const heroNameY = useTransform(scrollY, [0, 600], [0, 150]);
+  const [unlocked, setUnlocked] = useState(isUnlockedNow);
+
+  if (!unlocked) return <CountdownGate onEnter={() => setUnlocked(true)} />;
 
   return (
     <div style={{ background: C.dark, color: "#fff", fontFamily: "'Inter', sans-serif", overflowX: "hidden", minHeight: "100vh" }}>
@@ -701,7 +850,7 @@ export default function App() {
         </motion.h1>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9, duration: 1 }} style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.4rem,3vw,2.2rem)", fontStyle: "italic", color: C.petals, marginTop: "0.5rem" }}>
-          turns twenty-two 🌹
+          turns twenty-one 🌹
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 1.1, duration: 1 }} style={{ fontSize: "0.8rem", letterSpacing: "0.2em", color: "rgba(255,255,255,0.45)", marginTop: "0.4rem" }}>
@@ -713,6 +862,8 @@ export default function App() {
           <motion.span animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 0.8 }} style={{ display: "inline-block", width: 2, height: "1.2em", background: C.gold, verticalAlign: "bottom", marginLeft: 2 }} />
         </motion.div>
 
+        <HeroPolaroids />
+
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2 }} style={{ position: "absolute", bottom: "2.5rem", left: "50%", transform: "translateX(-50%)", display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
           <span style={{ fontSize: "0.65rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.35)", textTransform: "uppercase" }}>Scroll to explore</span>
           <motion.div animate={{ scaleY: [0, 1, 0] }} transition={{ repeat: Infinity, duration: 1.8, ease: "easeInOut" }} style={{ width: 1, height: 50, background: `linear-gradient(to bottom, ${C.gold}, transparent)`, transformOrigin: "top" }} />
@@ -721,28 +872,20 @@ export default function App() {
 
       <FloralDivider emoji="🌸 🥀 🌸" />
 
-      {/* ── COUNTDOWN ── */}
+      {/* ── AGE TICKER ── */}
       <section style={{ minHeight: "60vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
-        <Reveal><SectionTitle>Counting Down to Your Big Day</SectionTitle></Reveal>
-        <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2rem" }}>Every second brings us closer to celebrating the most special person 🎉</p></Reveal>
+        <Reveal><SectionTitle>Every Second of You ✨</SectionTitle></Reveal>
+        <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2rem" }}>This is exactly how long the world has been lucky to have you 🌹</p></Reveal>
         <Reveal delay={0.2}>
-          {countdown.isToday ? (
-            <motion.p animate={{ scale: [1, 1.05, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} style={{ fontSize: "2rem", color: C.gold }}>🎉 TODAY IS THE DAY! Happy Birthday Isha! 🎉</motion.p>
-          ) : (
-            <>
-              <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center" }}>
-                {[{ label: "Days", val: countdown.days }, { label: "Hours", val: countdown.hours }, { label: "Minutes", val: countdown.mins }, { label: "Seconds", val: countdown.secs }].map(({ label, val }) => (
-                  <motion.div key={label} whileHover={{ scale: 1.05 }} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(212,168,67,0.2)`, borderRadius: 16, padding: "1.5rem 2rem", minWidth: 100, backdropFilter: "blur(10px)" }}>
-                    <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "4rem", letterSpacing: "0.06em", background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "block", lineHeight: 1 }}>{String(val).padStart(2, "0")}</span>
-                    <span style={{ fontSize: "0.65rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", display: "block", marginTop: "0.4rem" }}>{label}</span>
-                  </motion.div>
-                ))}
-              </div>
-              <p style={{ marginTop: "1.5rem", fontSize: "0.85rem", color: C.gold, letterSpacing: "0.1em" }}>
-                {countdown.days === 0 ? "🎉 Her birthday is TODAY!" : countdown.days === 1 ? "Just 1 day left! 🌹" : `${countdown.days} days until the magic begins ✨`}
-              </p>
-            </>
-          )}
+          <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap", justifyContent: "center" }}>
+            {[{ label: "Years", val: age.years }, { label: "Days", val: age.days }, { label: "Hours", val: age.hours }, { label: "Minutes", val: age.mins }, { label: "Seconds", val: age.secs }].map(({ label, val }) => (
+              <motion.div key={label} whileHover={{ scale: 1.05 }} style={{ background: "rgba(255,255,255,0.03)", border: `1px solid rgba(212,168,67,0.2)`, borderRadius: 16, padding: "1.5rem 2rem", minWidth: 100, backdropFilter: "blur(10px)" }}>
+                <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "4rem", letterSpacing: "0.06em", background: `linear-gradient(160deg, #fff5e0 0%, ${C.goldLight} 40%, ${C.rose} 100%)`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", display: "block", lineHeight: 1 }}>{String(val).padStart(2, "0")}</span>
+                <span style={{ fontSize: "0.65rem", letterSpacing: "0.3em", color: "rgba(255,255,255,0.4)", textTransform: "uppercase", display: "block", marginTop: "0.4rem" }}>{label}</span>
+              </motion.div>
+            ))}
+          </div>
+          <p style={{ marginTop: "1.5rem", fontSize: "0.85rem", color: C.gold, letterSpacing: "0.1em" }}>…and every single one of them made the world better ✨</p>
         </Reveal>
       </section>
 
@@ -768,7 +911,7 @@ export default function App() {
 
       {/* ── 22 REASONS ── */}
       <section style={{ minHeight: "85vh", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "4rem 2rem", textAlign: "center", position: "relative", zIndex: 10 }}>
-        <Reveal><SectionTitle>22 Reasons I Adore You 💖</SectionTitle></Reveal>
+        <Reveal><SectionTitle>21 Reasons I Adore You 💖</SectionTitle></Reveal>
         <Reveal delay={0.1}><p style={{ fontFamily: "'Cormorant Garamond', serif", fontStyle: "italic", color: "rgba(255,255,255,0.5)", fontSize: "1rem", marginBottom: "2.2rem" }}>One for every beautiful year of you</p></Reveal>
         <Reveal delay={0.2}><ReasonsSection /></Reveal>
       </section>
@@ -783,13 +926,13 @@ export default function App() {
             <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "10rem", color: "rgba(212,168,67,0.07)", position: "absolute", top: "-1rem", left: "1rem", lineHeight: 1, pointerEvents: "none" }}>"</div>
             <p style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(1.1rem,2.2vw,1.55rem)", fontWeight: 300, lineHeight: 1.9, color: "rgba(255,255,255,0.85)", fontStyle: "italic", position: "relative", zIndex: 1 }}>
               Dear Isha,<br /><br />
-              Twenty-two years ago, the world gained someone who would make it immeasurably brighter.
+              Twenty-one years ago, the world gained someone who would make it immeasurably brighter.
               You carry within you a warmth and a kindness that touch everyone lucky enough to know you —
               the kind of soul that turns ordinary days into something worth remembering.<br /><br />
               On this day that belongs entirely to you, I hope you feel every ounce of the joy you so freely give to others.
               May this year bring you endless laughter, good health, sweet little surprises, and a thousand beautiful moments —
               the kind that make your eyes light up the way only yours do.<br /><br />
-              You deserve all the happiness in the world, Isha. Here's to 22 — may it be your most dazzling year yet.<br /><br />
+              You deserve all the happiness in the world, Isha. Here's to 21 — may it be your most dazzling year yet.<br /><br />
               Happy Birthday, with all my love,
             </p>
             <div style={{ marginTop: "2rem", fontFamily: "'Playfair Display', serif", fontSize: "1.1rem", color: C.gold }}>— Arup 🌹</div>
@@ -818,7 +961,7 @@ export default function App() {
 
       {/* ── FOOTER ── */}
       <footer style={{ textAlign: "center", padding: "3rem 2rem", position: "relative", zIndex: 10 }}>
-        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: C.rose, marginBottom: "1rem" }}>Happy 22nd Birthday, Isha 🌹</p>
+        <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: C.rose, marginBottom: "1rem" }}>Happy 21st Birthday, Isha 🌹</p>
         <p style={{ fontSize: "0.7rem", letterSpacing: "0.2em", color: "rgba(255,255,255,0.2)" }}>Made with <span style={{ color: C.rose }}>♥</span> — click anywhere to celebrate</p>
       </footer>
     </div>
